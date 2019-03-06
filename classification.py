@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
+from sklearn.decomposition import RandomizedPCA
 
 # np.set_printoptions(suppress=True)
 
@@ -261,13 +262,27 @@ feature_train, feature_test, target_train, target_test = train_test_split(
 print(target_train)
 # exit()
 
-clf = SVC(C = 1000, kernel = 'rbf', gamma = 0.001)
-clf.fit(feature_train, target_train)
-pred = clf.predict(feature_test)
-acc = accuracy_score(pred, target_test)
+pca = RandomizedPCA(n_components=2, whiten=True).fit(feature_train)
+print(pca.explained_variance_ratio_ )
+# exit()
+X_train_pca = pca.transform(feature_train)
+X_test_pca = pca.transform(feature_test)
 
-print(precision_recall_fscore_support(target_test, pred, average='weighted'))
+clf = SVC(C = 1000, kernel = 'rbf', gamma = 0.001)
+clf.fit(X_train_pca, target_train)
+pred = clf.predict(X_test_pca)
+acc = accuracy_score(pred, target_test)
+# print(precision_recall_fscore_support(target_test, pred, average='weighted'))
+print (classification_report(target_test, pred))
 # print(acc)
+# clf = SVC(C = 1000, kernel = 'rbf', gamma = 0.001)
+# clf.fit(feature_train, target_train)
+# pred = clf.predict(feature_test)
+# acc = accuracy_score(pred, target_test)
+
+# print(precision_recall_fscore_support(target_test, pred, average='weighted'))
+# print(acc)
+
 
 # print(feature_train)
 # print(target_train)
@@ -310,7 +325,7 @@ print(precision_recall_fscore_support(target_test, pred, average='weighted'))
 #     print()
 
 feature1_for_plot = np_players[:, 0]
-feature2_for_plot = np_players[:, 2]
+feature2_for_plot = np_players[:, 1]
 
 
 # target_test_for_plot = target_test[:,0]
@@ -327,6 +342,6 @@ for feature1, feature2, target in np.nditer([feature1_for_plot, feature2_for_plo
 #             np_performances[0], color='r', label="Above")
 
 plt.xlabel('Career Performance')
-plt.ylabel('Recent Score')
+plt.ylabel('Recent Form')
 plt.legend()
 plt.show()
