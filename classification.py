@@ -1,6 +1,6 @@
 import pymysql.cursors
 import numpy as np
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
@@ -8,6 +8,8 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.decomposition import RandomizedPCA
+from sklearn.metrics import confusion_matrix
+from sklearn.neural_network import MLPClassifier
 
 # np.set_printoptions(suppress=True)
 
@@ -19,6 +21,15 @@ def batsmen_model(matches, innings, average, hundreds, fifties):
         u = innings/matches
         v = (20 * hundreds) + (5 * fifties)
         w = (0.3 * v) + (0.7 * average)
+        return u * w
+
+def batsmen_model_form(matches, innings, average, runs, hundreds, fifties, strike_rate):
+    if(innings <= 0):
+        return 0.0
+    else:
+        u = innings/matches
+        v = (20 * hundreds) + (5 * fifties)
+        w = (0.5 * v) + (0.2 * strike_rate) + (0.5 * runs)
         return u * w
 
 
@@ -47,14 +58,18 @@ try:
             home_score = batsmen_model(player['home_matches'], player['home_innings'],
                                        player['home_average'], player['home_100s'], player['home_50s'])
 
-            # condition_performances = away_score + home_score
+            # recent_score = batsmen_model_form(player['form_matches'], player['form_innings'],
+            #                            player['form_average'], player['form_runs'] , player['form_100s'], player['form_50s'], player['form_strike_rate'])
+            
+            recent_score = batsmen_model(player['form_matches'], player['form_innings'],
+                                       player['form_average'], player['form_100s'], player['form_50s'])
 
             # career_score = career_score + condition_performances
 
             # batsmen_score = (0.35 * career_score) + (0.65 * player['form_average'] )
 
             player_list.append(
-                [career_score, player['form_average'], away_score, home_score])
+                [career_score, recent_score, away_score, home_score])
 
     with connection.cursor() as cursor:
         sql = "SELECT * FROM `pre_wc_2015`"
@@ -71,14 +86,17 @@ try:
             home_score = batsmen_model(player['home_matches'], player['home_innings'],
                                        player['home_average'], player['home_100s'], player['home_50s'])
 
-            # condition_performances = away_score + home_score
+            # recent_score = batsmen_model_form(player['form_matches'], player['form_innings'],
+            #                            player['form_average'], player['form_runs'] , player['form_100s'], player['form_50s'], player['form_strike_rate'])
 
+            recent_score = batsmen_model(player['form_matches'], player['form_innings'],
+                                       player['form_average'], player['form_100s'], player['form_50s'])
             # career_score = career_score + condition_performances
 
             # batsmen_score = (0.35 * career_score) + (0.65 * player['form_average'] )
 
             player_list.append(
-                [career_score, player['form_average'], away_score, home_score])
+                [career_score, recent_score, away_score, home_score])
 
     # with connection.cursor() as cursor:
     #     sql = "SELECT * FROM `pre_ct_2017`"
@@ -99,9 +117,10 @@ try:
 
     #         # career_score = career_score + condition_performances
 
-    #         # batsmen_score = (0.35 * career_score) + (0.65 * player['form_average'] )
+    #         recent_score = batsmen_model_form(player['form_matches'], player['form_innings'],
+    #                                    player['form_average'], player['form_runs'] , player['form_100s'], player['form_50s'], player['form_strike_rate'])
 
-    #         player_list.append([career_score, player['form_average'], away_score, home_score])
+    #         player_list.append([career_score, recent_score, away_score, home_score])
 
     with connection.cursor() as cursor:
         sql = "SELECT * FROM `pre_ct_2013`"
@@ -118,14 +137,17 @@ try:
             home_score = batsmen_model(player['home_matches'], player['home_innings'],
                                        player['home_average'], player['home_100s'], player['home_50s'])
 
-            # condition_performances = away_score + home_score
+            # recent_score = batsmen_model_form(player['form_matches'], player['form_innings'],
+            #                            player['form_average'], player['form_runs'] , player['form_100s'], player['form_50s'], player['form_strike_rate'])
 
+            recent_score = batsmen_model(player['form_matches'], player['form_innings'],
+                                       player['form_average'], player['form_100s'], player['form_50s'])
             # career_score = career_score + condition_performances
 
             # batsmen_score = (0.35 * career_score) + (0.65 * player['form_average'] )
 
             player_list.append(
-                [career_score, player['form_average'], away_score, home_score])
+                [career_score, recent_score, away_score, home_score])
 
         np_players = np.array(player_list)
         # print(np_players)
@@ -253,18 +275,17 @@ try:
 finally:
     connection.close()
     # print(np_performances)
-    print(np_players)
+    # print(np_players)
     # exit()
     # np_players = np_players[:,:2]
 # print(np_players)
 feature_train, feature_test, target_train, target_test = train_test_split(
     np_players, np_performances, test_size=0.20, random_state=42)
-print(target_train)
+# print(target_train)
 # exit()
 
 pca = RandomizedPCA(n_components=2, whiten=True).fit(feature_train)
 print(pca.explained_variance_ratio_ )
-# exit()
 X_train_pca = pca.transform(feature_train)
 X_test_pca = pca.transform(feature_test)
 
@@ -274,19 +295,24 @@ pred = clf.predict(X_test_pca)
 acc = accuracy_score(pred, target_test)
 # print(precision_recall_fscore_support(target_test, pred, average='weighted'))
 print (classification_report(target_test, pred))
-# print(acc)
+print('Accuracy:' ,acc)
+# print (confusion_matrix(target_test, pred))
 # clf = SVC(C = 1000, kernel = 'rbf', gamma = 0.001)
 # clf.fit(feature_train, target_train)
 # pred = clf.predict(feature_test)
 # acc = accuracy_score(pred, target_test)
+# tuned_parameters = {'solver': ['lbfgs'], 'max_iter': [1000], 'alpha': 10.0 ** -np.arange(1, 10), 'hidden_layer_sizes':np.arange(10, 15), 'random_state':[0,1,2,3,4,5,6,7,8,9]}
+# clf = MLPClassifier(solver='lbfgs', alpha=1e-5,
+#                      hidden_layer_sizes=(5, 2), random_state=1)
+# clf.fit(X_train_pca, target_train)    
+# pred = clf.predict(X_test_pca)
+# acc = accuracy_score(pred, target_test)
+# print(acc)
 
 # print(precision_recall_fscore_support(target_test, pred, average='weighted'))
 # print(acc)
 
 
-# print(feature_train)
-# print(target_train)
-# exit()
 # tuned_parameters = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4],
 #                      'C': [1, 10, 100, 1000]},
 #                     {'kernel': ['linear'], 'C': [1, 10, 100, 1000]},
@@ -298,31 +324,31 @@ print (classification_report(target_test, pred))
 #     print("# Tuning hyper-parameters for %s" % score)
 #     print()
 
-#     clf = GridSearchCV(SVC(), tuned_parameters, cv=5,
+# clf = GridSearchCV(SVC(), tuned_parameters, cv=5,
 #                        scoring='%s_macro' % score)
-#     clf.fit(feature_train, target_train)
+# clf.fit(X_train_pca, target_train)
 
-#     print("Best parameters set found on development set:")
-#     print()
-#     print(clf.best_params_)
-#     print()
-#     print("Grid scores on development set:")
-#     print()
-#     means = clf.cv_results_['mean_test_score']
-#     stds = clf.cv_results_['std_test_score']
-#     for mean, std, params in zip(means, stds, clf.cv_results_['params']):
-#         print("%0.3f (+/-%0.03f) for %r"
-#               % (mean, std * 2, params))
-#     print()
+# print("Best parameters set found on development set:")
+# print()
+# print(clf.best_params_)
+# print()
+# print("Grid scores on development set:")
+# print()
+# means = clf.cv_results_['mean_test_score']
+# stds = clf.cv_results_['std_test_score']
+# for mean, std, params in zip(means, stds, clf.cv_results_['params']):
+#     print("%0.3f (+/-%0.03f) for %r"
+#         % (mean, std * 2, params))
+# print()
 
-#     print("Detailed classification report:")
-#     print()
-#     print("The model is trained on the full development set.")
-#     print("The scores are computed on the full evaluation set.")
-#     print()
-#     y_true, y_pred = target_test, clf.predict(feature_test)
-#     print(classification_report(y_true, y_pred))
-#     print()
+# print("Detailed classification report:")
+# print()
+# print("The model is trained on the full development set.")
+# print("The scores are computed on the full evaluation set.")
+# print()
+# y_true, y_pred = target_test, clf.predict(X_test_pca)
+# print(classification_report(y_true, y_pred))
+# print()
 
 feature1_for_plot = np_players[:, 0]
 feature2_for_plot = np_players[:, 1]
