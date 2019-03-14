@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
-from sklearn.decomposition import RandomizedPCA
+from sklearn.decomposition import PCA
 from sklearn.metrics import confusion_matrix
 from sklearn.neural_network import MLPClassifier
+from mlxtend.plotting import plot_decision_regions
 
 # np.set_printoptions(suppress=True)
 
@@ -22,6 +23,7 @@ def batsmen_model(matches, innings, average, hundreds, fifties):
         v = (20 * hundreds) + (5 * fifties)
         w = (0.3 * v) + (0.7 * average)
         return u * w
+
 
 def batsmen_model_form(matches, innings, average, runs, hundreds, fifties, strike_rate):
     if(innings <= 0):
@@ -60,9 +62,9 @@ try:
 
             # recent_score = batsmen_model_form(player['form_matches'], player['form_innings'],
             #                            player['form_average'], player['form_runs'] , player['form_100s'], player['form_50s'], player['form_strike_rate'])
-            
+
             recent_score = batsmen_model(player['form_matches'], player['form_innings'],
-                                       player['form_average'], player['form_100s'], player['form_50s'])
+                                         player['form_average'], player['form_100s'], player['form_50s'])
 
             # career_score = career_score + condition_performances
 
@@ -90,7 +92,7 @@ try:
             #                            player['form_average'], player['form_runs'] , player['form_100s'], player['form_50s'], player['form_strike_rate'])
 
             recent_score = batsmen_model(player['form_matches'], player['form_innings'],
-                                       player['form_average'], player['form_100s'], player['form_50s'])
+                                         player['form_average'], player['form_100s'], player['form_50s'])
             # career_score = career_score + condition_performances
 
             # batsmen_score = (0.35 * career_score) + (0.65 * player['form_average'] )
@@ -141,7 +143,7 @@ try:
             #                            player['form_average'], player['form_runs'] , player['form_100s'], player['form_50s'], player['form_strike_rate'])
 
             recent_score = batsmen_model(player['form_matches'], player['form_innings'],
-                                       player['form_average'], player['form_100s'], player['form_50s'])
+                                         player['form_average'], player['form_100s'], player['form_50s'])
             # career_score = career_score + condition_performances
 
             # batsmen_score = (0.35 * career_score) + (0.65 * player['form_average'] )
@@ -274,37 +276,33 @@ try:
 
 finally:
     connection.close()
-    # print(np_performances)
-    # print(np_players)
-    # exit()
-    # np_players = np_players[:,:2]
-# print(np_players)
+
 feature_train, feature_test, target_train, target_test = train_test_split(
     np_players, np_performances, test_size=0.20, random_state=42)
-# print(target_train)
-# exit()
 
-pca = RandomizedPCA(n_components=2, whiten=True).fit(feature_train)
-print(pca.explained_variance_ratio_ )
+pca = PCA(n_components=2).fit(feature_train)
+print(pca.explained_variance_ratio_)
 X_train_pca = pca.transform(feature_train)
 X_test_pca = pca.transform(feature_test)
 
-clf = SVC(C = 1000, kernel = 'rbf', gamma = 0.001)
+clf = SVC(C=1000, kernel='rbf', gamma=0.001)
 clf.fit(X_train_pca, target_train)
 pred = clf.predict(X_test_pca)
 acc = accuracy_score(pred, target_test)
 # print(precision_recall_fscore_support(target_test, pred, average='weighted'))
-print (classification_report(target_test, pred))
-print('Accuracy:' ,acc)
+print(classification_report(target_test, pred))
+print('Accuracy:', acc)
+
+plot_decision_regions(X=X_train_pca,
+                      y=target_train,
+                      clf=clf,
+                      legend=2)
 # print (confusion_matrix(target_test, pred))
-# clf = SVC(C = 1000, kernel = 'rbf', gamma = 0.001)
-# clf.fit(feature_train, target_train)
-# pred = clf.predict(feature_test)
-# acc = accuracy_score(pred, target_test)
+
 # tuned_parameters = {'solver': ['lbfgs'], 'max_iter': [1000], 'alpha': 10.0 ** -np.arange(1, 10), 'hidden_layer_sizes':np.arange(10, 15), 'random_state':[0,1,2,3,4,5,6,7,8,9]}
 # clf = MLPClassifier(solver='lbfgs', alpha=1e-5,
 #                      hidden_layer_sizes=(5, 2), random_state=1)
-# clf.fit(X_train_pca, target_train)    
+# clf.fit(X_train_pca, target_train)
 # pred = clf.predict(X_test_pca)
 # acc = accuracy_score(pred, target_test)
 # print(acc)
@@ -356,16 +354,19 @@ feature2_for_plot = np_players[:, 1]
 
 # target_test_for_plot = target_test[:,0]
 # target_train_for_plot = target_train[:,0]
-for feature1, feature2, target in np.nditer([feature1_for_plot, feature2_for_plot, np_performances]):
-    if(target == 1):
-        plt.scatter(feature1, feature2, color='r')
-    else:
-        plt.scatter(feature1, feature2, color='b')
+# for feature1, feature2, target in np.nditer([feature1_for_plot, feature2_for_plot, np_performances]):
+#     if(target == 1):
+#         plt.scatter(feature1, feature2, color='r')
+#     else:
+#         plt.scatter(feature1, feature2, color='b')
 
 # plt.scatter(feature1_for_plot[0],
 #             np_performances[0], color='b', label="Below")
 # plt.scatter(feature1_for_plot[0],
 #             np_performances[0], color='r', label="Above")
+# plt.xlabel(X.columns[0], size=14)
+# plt.ylabel(X.columns[1], size=14)
+plt.title('SVM Decision Region Boundary', size=16)
 
 plt.xlabel('Career Performance')
 plt.ylabel('Recent Form')
