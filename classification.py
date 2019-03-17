@@ -15,6 +15,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 import math as math
+from sklearn import preprocessing
 
 # np.set_printoptions(suppress=True)
 
@@ -157,18 +158,15 @@ try:
                 [career_score, recent_score, away_score, home_score])
 
         np_players = np.array(player_list)
-        # print(np_players)
-        # print(np_players.shape)
-        # exit()
         max_career = np.max(np_players[:, 0])
         max_recent = np.max(np_players[:, 1])
         max_away = np.max(np_players[:, 2])
         max_home = np.max(np_players[:, 3])
-        # print(max_career)
-        # print(max_away)
-        # print(max_home)
-        # exit()
 
+        # min_max_scaler = preprocessing.MinMaxScaler()
+        # np_players = min_max_scaler.fit_transform(np_players)
+        # print(np_players)
+        # exit()
         for player in np_players:
             career_score = player[0]
             recent_score = player[1]
@@ -314,6 +312,11 @@ svm_clf.fit(feature_train, target_train)
 svm_pred = svm_clf.predict(feature_test)
 svm_pred_prob = svm_clf.predict_proba(feature_test)
 
+desT = DecisionTreeClassifier(max_depth = 8)
+desT.fit(feature_train, target_train)
+desc_pred = desT.predict(feature_test)
+desc_pred_prob = desT.predict_proba(feature_test)
+
 miss_nb = 0
 for index, pred in  enumerate(nb_pred):
     if(pred != target_test[index]):
@@ -334,9 +337,18 @@ for index, pred in  enumerate(svm_pred):
 
 amt_say_svm = 1/2 * (math.log((1-(miss_svm/119))/(miss_svm/119)))
 
+miss_desc = 0
+for index, pred in  enumerate(desc_pred):
+    if(pred != target_test[index]):
+        miss_desc += 1
+
+amt_say_desc = 1/2 * (math.log((1-(miss_desc/119))/(miss_desc/119)))
+
 print('Amount of say NB :', amt_say_nb)
 print('Amount of say MLP :', amt_say_mlp)
 print('Amount of say SVM :', amt_say_svm)
+print('Amount of say Descision Tree :', amt_say_desc)
+
 
 # print('NB Pred :', nb_pred)
 final_predictions = []
@@ -351,8 +363,11 @@ for index, initial_nb_pred in enumerate(nb_pred_prob):
     weighted_svm_prediction0 = amt_say_svm * (svm_pred_prob[index][0])
     weighted_svm_prediction1 = amt_say_svm * (svm_pred_prob[index][1])
 
-    mean_weighted_prediction0 = (weighted_mlp_prediction0 + weighted_nb_prediction0 + weighted_svm_prediction0) / 3
-    mean_weighted_prediction1 = (weighted_mlp_prediction1 + weighted_nb_prediction1 + weighted_svm_prediction1) / 3
+    weighted_desc_prediction0 = amt_say_desc * (desc_pred_prob[index][0])
+    weighted_desc_prediction1 = amt_say_desc * (desc_pred_prob[index][1])
+
+    mean_weighted_prediction0 = (weighted_mlp_prediction0 + weighted_nb_prediction0 + weighted_svm_prediction0 + weighted_desc_prediction0 ) / 4
+    mean_weighted_prediction1 = (weighted_mlp_prediction1 + weighted_nb_prediction1 + weighted_svm_prediction1 + weighted_desc_prediction1) / 4
 
     # print('Mean Weighted 0 :', mean_weighted_prediction0)
     # print('Mean Weighted 1 :', mean_weighted_prediction1)
@@ -370,9 +385,6 @@ print(classification_report(target_test, final_predictions))
 #     if(pred != target_train[index]):
 #         feature_train[index][4] += feature_train[index][4] * math.exp(amt_say_mlp)  
     
-# desT = DecisionTreeClassifier(max_depth=1)
-# desT.fit(feature_train, target_train)
-# desc_pred = desT.predict(feature_train)
 
 # miss = 0
 # for index, pred in  enumerate(desc_pred):
