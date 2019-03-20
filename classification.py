@@ -312,7 +312,7 @@ svm_clf.fit(feature_train, target_train)
 svm_pred = svm_clf.predict(feature_test)
 svm_pred_prob = svm_clf.predict_proba(feature_test)
 
-desT = DecisionTreeClassifier(max_depth = 8)
+desT = DecisionTreeClassifier(max_depth=2)
 desT.fit(feature_train, target_train)
 desc_pred = desT.predict(feature_test)
 desc_pred_prob = desT.predict_proba(feature_test)
@@ -479,8 +479,8 @@ print(classification_report(target_test, final_predictions))
 # feature2_for_plot = np_players[:, 1]
 
 
-# target_test_for_plot = target_test[:,0]
-# target_train_for_plot = target_train[:,0]
+# # target_test_for_plot = target_test[:,0]
+# # target_train_for_plot = target_train[:,0]
 # for feature1, feature2, target in np.nditer([feature1_for_plot, feature2_for_plot, np_performances]):
 #     if(target == 1):
 #         plt.scatter(feature1, feature2, color='r')
@@ -491,8 +491,8 @@ print(classification_report(target_test, final_predictions))
 #             np_performances[0], color='b', label="Below")
 # plt.scatter(feature1_for_plot[0],
 #             np_performances[0], color='r', label="Above")
-# plt.xlabel(X.columns[0], size=14)
-# plt.ylabel(X.columns[1], size=14)
+# # plt.xlabel(X.columns[0], size=14)
+# # plt.ylabel(X.columns[1], size=14)
 # plt.title('SVM Decision Region Boundary', size=16)
 
 # plt.xlabel('Career Performance')
