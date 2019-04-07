@@ -17,6 +17,7 @@ from sklearn.tree import DecisionTreeClassifier
 import math as math
 from sklearn import preprocessing
 from flask import Flask
+from flask import jsonify
 
 app = Flask(__name__)
 
@@ -222,6 +223,7 @@ def get_player_pool(connection):
 
 connection, nb, mlp, svm, dest, desc_say, mlp_say, nb_say, svm_say = initialise()
 
+
 # print('NB Pred :', nb_pred)
 # final_predictions = []
 
@@ -259,7 +261,11 @@ def hello_world():
 
 @app.route('/players')
 def get_players():
-  return get_player_pool(connection)  
+  return jsonify(get_player_pool(connection)) 
+
+@app.route('/selectedPlayers/<players>')
+def analyse_players(players):
+    print('fuck')
 
 if __name__ == '__main__':
     app.run()
