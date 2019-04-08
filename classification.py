@@ -98,6 +98,34 @@ def fetch_data_post(query,connection):
     
     return post_performance
 
+def scale_features(players,max_career,max_recent,max_away,max_home):
+    # np_player_list = np.array(players)
+
+    for player in players:
+        career_score = player[0]
+        recent_score = player[1]
+        away_score = player[2]
+        home_score = player[3]
+
+        normalized_career_score = career_score/max_career
+        player[0] = normalized_career_score
+
+        if(recent_score != 0):
+            normalized_recent_score = recent_score/max_recent
+            player[1] = normalized_recent_score
+
+        if(away_score != 0):
+            normalized_away_score = away_score/max_away
+            player[2] = normalized_away_score
+
+        if(home_score != 0):
+            normalized_home_score = home_score/max_home
+            player[3] = normalized_home_score
+
+
+    return players
+
+
 
 def initialise():
     # Connect to the database
@@ -134,28 +162,8 @@ def initialise():
     max_recent = np.max(np_players[:, 1])
     max_away = np.max(np_players[:, 2])
     max_home = np.max(np_players[:, 3])
-
-    for player in np_players:
-        career_score = player[0]
-        recent_score = player[1]
-        away_score = player[2]
-        home_score = player[3]
-
-        normalized_career_score = career_score/max_career
-        player[0] = normalized_career_score
-
-        if(recent_score != 0):
-            normalized_recent_score = recent_score/max_recent
-            player[1] = normalized_recent_score
-
-        if(away_score != 0):
-            normalized_away_score = away_score/max_away
-            player[2] = normalized_away_score
-
-        if(home_score != 0):
-            normalized_home_score = home_score/max_home
-            player[3] = normalized_home_score
-
+    
+    np_players = scale_features(np_players,max_career,max_recent,max_away,max_home)
 
     feature_train, feature_test, target_train, target_test = train_test_split(
         np_players, np_performances, test_size=0.20, random_state=42)
@@ -213,7 +221,9 @@ def initialise():
     print('Amount of say SVM :', amt_say_svm)
     print('Amount of say Descision Tree :', amt_say_desc)
 
-    return connection, gnb, mlp_clf, svm_clf, desT, amt_say_desc, amt_say_mlp, amt_say_nb, amt_say_svm
+    return connection, gnb, mlp_clf, svm_clf, desT, amt_say_desc, amt_say_mlp, amt_say_nb, amt_say_svm, max_home,max_away,max_recent,max_career
+
+connection, nb, mlp, svm, dest, desc_say, mlp_say, nb_say, svm_say, max_home, max_away, max_recent, max_career = initialise()
 
 def get_player_pool(connection):
     with connection.cursor() as cursor:
@@ -221,38 +231,73 @@ def get_player_pool(connection):
         result = cursor.fetchall()
         return result
 
-connection, nb, mlp, svm, dest, desc_say, mlp_say, nb_say, svm_say = initialise()
+def built_features(player):
+    career_score = batsmen_model(player['overall_matches'], player['overall_innings'],
+                                            player['overall_average'], player['overall_100s'], player['overall_50s'])
+
+    away_score = batsmen_model(player['away_matches'], player['away_innings'],
+                                        player['away_average'], player['away_100s'], player['away_50s'])
+
+    home_score = batsmen_model(player['home_matches'], player['home_innings'],
+                                        player['home_average'], player['home_100s'], player['home_50s'])
+
+    recent_score = batsmen_model(player['form_matches'], player['form_innings'],
+                                            player['form_average'], player['form_100s'], player['form_50s'])
 
 
-# print('NB Pred :', nb_pred)
-# final_predictions = []
+    return [career_score, recent_score, away_score, home_score]
 
-# for index, initial_nb_pred in enumerate(nb_pred_prob):
-#     weighted_nb_prediction0 = amt_say_nb * (nb_pred_prob[index][0])
-#     weighted_nb_prediction1 = amt_say_nb * (nb_pred_prob[index][1])
+def prediction_engine(player_list):
+    nb_pred_prob = nb.predict_proba(player_list)
+    # nb_pred = nb.predict(player_list)
+    mlp_pred_prob = mlp.predict_proba(player_list)
+    # mlp_pred = mlp.predict(player_list)
+    # svm_pred = svm.predict(player_list)
+    svm_pred_prob = svm.predict_proba(player_list)
+    # desc_pred = dest.predict(player_list)
+    desc_pred_prob = dest.predict_proba(player_list)
 
-#     weighted_mlp_prediction0 = amt_say_mlp * (mlp_pred_prob[index][0])
-#     weighted_mlp_prediction1 = amt_say_mlp * (mlp_pred_prob[index][1])
+    final_predictions = []
 
-#     weighted_svm_prediction0 = amt_say_svm * (svm_pred_prob[index][0])
-#     weighted_svm_prediction1 = amt_say_svm * (svm_pred_prob[index][1])
+    for index, initial_nb_pred in enumerate(nb_pred_prob):
+        weighted_nb_prediction0 = nb_say * (nb_pred_prob[index][0])
+        weighted_nb_prediction1 = nb_say * (nb_pred_prob[index][1])
 
-#     weighted_desc_prediction0 = amt_say_desc * (desc_pred_prob[index][0])
-#     weighted_desc_prediction1 = amt_say_desc * (desc_pred_prob[index][1])
+        weighted_mlp_prediction0 = mlp_say * (mlp_pred_prob[index][0])
+        weighted_mlp_prediction1 = mlp_say * (mlp_pred_prob[index][1])
 
-#     mean_weighted_prediction0 = (weighted_mlp_prediction0 + weighted_nb_prediction0 + weighted_svm_prediction0 + weighted_desc_prediction0 ) / 4
-#     mean_weighted_prediction1 = (weighted_mlp_prediction1 + weighted_nb_prediction1 + weighted_svm_prediction1 + weighted_desc_prediction1) / 4
+        weighted_svm_prediction0 = svm_say * (svm_pred_prob[index][0])
+        weighted_svm_prediction1 = svm_say * (svm_pred_prob[index][1])
 
-#     # print('Mean Weighted 0 :', mean_weighted_prediction0)
-#     # print('Mean Weighted 1 :', mean_weighted_prediction1)
-#     if(mean_weighted_prediction0 > mean_weighted_prediction1):
-#         final_predictions.append(0)
-#     else:
-#         final_predictions.append(1)
+        weighted_desc_prediction0 = desc_say * (desc_pred_prob[index][0])
+        weighted_desc_prediction1 = desc_say * (desc_pred_prob[index][1])
 
-# acc = accuracy_score(final_predictions, target_test)
-# print('Accuracy :', acc)
-# print(classification_report(target_test, final_predictions))
+        mean_weighted_prediction0 = (weighted_mlp_prediction0 + weighted_nb_prediction0 + weighted_svm_prediction0 + weighted_desc_prediction0 ) / 4
+        mean_weighted_prediction1 = (weighted_mlp_prediction1 + weighted_nb_prediction1 + weighted_svm_prediction1 + weighted_desc_prediction1) / 4
+
+    # print('Mean Weighted 0 :', mean_weighted_prediction0)
+    # print('Mean Weighted 1 :', mean_weighted_prediction1)
+    if(mean_weighted_prediction0 > mean_weighted_prediction1):
+        final_predictions.append(0)
+    else:
+        final_predictions.append(1)
+
+    return final_predictions
+
+
+def analyse_players(players):
+    selected_players=[]
+    with connection.cursor() as cursor:
+        for player in players:
+            sql = ('select * from sri_lanka where id=%s')
+            cursor.execute(sql, player)
+            result = cursor.fetchall()
+            selected_players.append(built_features(result))
+        
+        selected_players = scale_features(selected_players, max_career,max_recent,max_away,max_home)
+        predictions = prediction_engine(selected_players)
+
+        return predictions
 
 
 @app.route('/')
@@ -261,11 +306,14 @@ def hello_world():
 
 @app.route('/players')
 def get_players():
-  return jsonify(get_player_pool(connection)) 
+  response = jsonify(get_player_pool(connection)) 
+  response.headers.add("Access-Control-Allow-Origin", "*")
+  return response
 
 @app.route('/selectedPlayers/<players>')
-def analyse_players(players):
-    print('fuck')
+def selected_players(players):
+    response = jsonify(analyse_players(players))
+    return response
 
 if __name__ == '__main__':
     app.run()
