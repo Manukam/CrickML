@@ -23,6 +23,7 @@ from flask_cors import CORS, cross_origin
 app = Flask(__name__)
 # cors = CORS(app, resources={r"/selectedPlayers": {"origins": "*"}})
 
+
 def batsmen_model(matches, innings, average, hundreds, fifties):
     if(innings <= 0):
         return 0.0
@@ -52,30 +53,32 @@ def fetch_data_pre(query, connection):
             result = cursor.fetchall()
             for player in result:
                 career_score = batsmen_model(player['overall_matches'], player['overall_innings'],
-                                            player['overall_average'], player['overall_100s'], player['overall_50s'])
+                                             player['overall_average'], player['overall_100s'], player['overall_50s'])
 
                 away_score = batsmen_model(player['away_matches'], player['away_innings'],
-                                        player['away_average'], player['away_100s'], player['away_50s'])
+                                           player['away_average'], player['away_100s'], player['away_50s'])
 
                 home_score = batsmen_model(player['home_matches'], player['home_innings'],
-                                        player['home_average'], player['home_100s'], player['home_50s'])
+                                           player['home_average'], player['home_100s'], player['home_50s'])
 
                 # recent_score = batsmen_model_form(player['form_matches'], player['form_innings'],
                 #                            player['form_average'], player['form_runs'] , player['form_100s'], player['form_50s'], player['form_strike_rate'])
 
                 recent_score = batsmen_model(player['form_matches'], player['form_innings'],
-                                            player['form_average'], player['form_100s'], player['form_50s'])
+                                             player['form_average'], player['form_100s'], player['form_50s'])
 
                 # career_score = career_score + condition_performances
 
                 # batsmen_score = (0.35 * career_score) + (0.65 * player['form_average'] )
 
-                pre_performance.append([career_score, recent_score, away_score, home_score])
+                pre_performance.append(
+                    [career_score, recent_score, away_score, home_score])
     finally:
         print('done')
         return pre_performance
 
-def fetch_data_post(query,connection):
+
+def fetch_data_post(query, connection):
     with connection.cursor() as cursor:
         # Read a single record
         # sql = query
@@ -96,10 +99,11 @@ def fetch_data_post(query,connection):
                 post_performance.append(0)
             else:
                 post_performance.append(1)
-    
+
     return post_performance
 
-def scale_features(players,max_career,max_recent,max_away,max_home):
+
+def scale_features(players, max_career, max_recent, max_away, max_home):
     # np_player_list = np.array(players)
 
     for player in players:
@@ -123,19 +127,17 @@ def scale_features(players,max_career,max_recent,max_away,max_home):
             normalized_home_score = home_score/max_home
             player[3] = normalized_home_score
 
-
     return players
-
 
 
 def initialise():
     # Connect to the database
     connection = pymysql.connect(host='localhost',
-                             user='root',
-                             password='',
-                             db='crickml',
-                             charset='utf8mb4',
-                             cursorclass=pymysql.cursors.DictCursor)
+                                 user='root',
+                                 password='',
+                                 db='crickml',
+                                 charset='utf8mb4',
+                                 cursorclass=pymysql.cursors.DictCursor)
     player_list_2011 = []
     player_list_2013 = []
     player_list_2015 = []
@@ -146,36 +148,43 @@ def initialise():
     performance_list_2015 = []
     performance_list_2017 = []
 
-    player_list_2011 = fetch_data_pre('SELECT * FROM pre_wc_2011',connection)
-    player_list_2015 = fetch_data_pre('SELECT * FROM pre_wc_2015',connection)
-    player_list_2013 = fetch_data_pre('SELECT * FROM pre_ct_2013',connection)
-    player_list_2017 = fetch_data_pre('SELECT * FROM pre_ct_2017',connection)
+    player_list_2011 = fetch_data_pre('SELECT * FROM pre_wc_2011', connection)
+    player_list_2015 = fetch_data_pre('SELECT * FROM pre_wc_2015', connection)
+    player_list_2013 = fetch_data_pre('SELECT * FROM pre_ct_2013', connection)
+    player_list_2017 = fetch_data_pre('SELECT * FROM pre_ct_2017', connection)
 
-    performance_list_2011 = fetch_data_post('SELECT * FROM wc_2011',connection)
-    performance_list_2015 = fetch_data_post('SELECT * FROM wc_2015',connection)
-    performance_list_2013 = fetch_data_post('SELECT * FROM ct_2013',connection)
-    performance_list_2017 = fetch_data_post('SELECT * FROM ct_2017',connection)
+    performance_list_2011 = fetch_data_post(
+        'SELECT * FROM wc_2011', connection)
+    performance_list_2015 = fetch_data_post(
+        'SELECT * FROM wc_2015', connection)
+    performance_list_2013 = fetch_data_post(
+        'SELECT * FROM ct_2013', connection)
+    performance_list_2017 = fetch_data_post(
+        'SELECT * FROM ct_2017', connection)
 
-    np_players = np.concatenate((player_list_2011,player_list_2013,player_list_2015,player_list_2017), axis=0)
-    np_performances = np.concatenate((performance_list_2011,performance_list_2013,performance_list_2015,performance_list_2017), axis=0)
+    np_players = np.concatenate(
+        (player_list_2011, player_list_2013, player_list_2015, player_list_2017), axis=0)
+    np_performances = np.concatenate(
+        (performance_list_2011, performance_list_2013, performance_list_2015, performance_list_2017), axis=0)
 
     max_career = np.max(np_players[:, 0])
     max_recent = np.max(np_players[:, 1])
     max_away = np.max(np_players[:, 2])
     max_home = np.max(np_players[:, 3])
-    
-    np_players = scale_features(np_players,max_career,max_recent,max_away,max_home)
+
+    np_players = scale_features(
+        np_players, max_career, max_recent, max_away, max_home)
 
     feature_train, feature_test, target_train, target_test = train_test_split(
         np_players, np_performances, test_size=0.20, random_state=42)
-
 
     gnb = GaussianNB()
     gnb.fit(feature_train, target_train)
     # nb_pred_prob = gnb.predict_proba(feature_test)
     nb_pred = gnb.predict(feature_test)
 
-    mlp_clf = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1)
+    mlp_clf = MLPClassifier(solver='lbfgs', alpha=1e-5,
+                            hidden_layer_sizes=(5, 2), random_state=1)
     mlp_clf.fit(feature_train, target_train)
     # mlp_pred_prob = mlp_clf.predict_proba(feature_test)
     mlp_pred = mlp_clf.predict(feature_test)
@@ -191,27 +200,27 @@ def initialise():
     # desc_pred_prob = desT.predict_proba(feature_test)
 
     miss_nb = 0
-    for index, pred in  enumerate(nb_pred):
+    for index, pred in enumerate(nb_pred):
         if(pred != target_test[index]):
             miss_nb += 1
-    amt_say_nb = 1/2 * (math.log((1-(miss_nb/119))/(miss_nb/119))) 
+    amt_say_nb = 1/2 * (math.log((1-(miss_nb/119))/(miss_nb/119)))
 
     miss_mlp = 0
-    for index, pred in  enumerate(mlp_pred):
+    for index, pred in enumerate(mlp_pred):
         if(pred != target_test[index]):
             miss_mlp += 1
 
     amt_say_mlp = 1/2 * (math.log((1-(miss_mlp/119))/(miss_mlp/119)))
 
     miss_svm = 0
-    for index, pred in  enumerate(svm_pred):
+    for index, pred in enumerate(svm_pred):
         if(pred != target_test[index]):
             miss_svm += 1
 
     amt_say_svm = 1/2 * (math.log((1-(miss_svm/119))/(miss_svm/119)))
 
     miss_desc = 0
-    for index, pred in  enumerate(desc_pred):
+    for index, pred in enumerate(desc_pred):
         if(pred != target_test[index]):
             miss_desc += 1
 
@@ -222,9 +231,11 @@ def initialise():
     print('Amount of say SVM :', amt_say_svm)
     print('Amount of say Descision Tree :', amt_say_desc)
 
-    return connection, gnb, mlp_clf, svm_clf, desT, amt_say_desc, amt_say_mlp, amt_say_nb, amt_say_svm, max_home,max_away,max_recent,max_career
+    return connection, gnb, mlp_clf, svm_clf, desT, amt_say_desc, amt_say_mlp, amt_say_nb, amt_say_svm, max_home, max_away, max_recent, max_career
+
 
 connection, nb, mlp, svm, dest, desc_say, mlp_say, nb_say, svm_say, max_home, max_away, max_recent, max_career = initialise()
+
 
 def get_player_pool(connection):
     with connection.cursor() as cursor:
@@ -232,22 +243,23 @@ def get_player_pool(connection):
         result = cursor.fetchall()
         return result
 
+
 def built_features(player):
 
     career_score = batsmen_model(player[0]['overall_matches'], player[0]['overall_innings'],
-                                                player[0]['overall_average'], player[0]['overall_100s'], player[0]['overall_50s'])
+                                 player[0]['overall_average'], player[0]['overall_100s'], player[0]['overall_50s'])
 
     away_score = batsmen_model(player[0]['away_matches'], player[0]['away_innings'],
-                                            player[0]['away_average'], player[0]['away_100s'], player[0]['away_50s'])
+                               player[0]['away_average'], player[0]['away_100s'], player[0]['away_50s'])
 
     home_score = batsmen_model(player[0]['home_matches'], player[0]['home_innings'],
-                                            player[0]['home_average'], player[0]['home_100s'], player[0]['home_50s'])
+                               player[0]['home_average'], player[0]['home_100s'], player[0]['home_50s'])
 
     recent_score = batsmen_model(player[0]['form_matches'], player[0]['form_innings'],
-                                                player[0]['form_average'], player[0]['form_100s'], player[0]['form_50s'])
-
+                                 player[0]['form_average'], player[0]['form_100s'], player[0]['form_50s'])
 
     return [career_score, recent_score, away_score, home_score]
+
 
 def prediction_engine(player_list):
     nb_pred_prob = nb.predict_proba(player_list)
@@ -274,8 +286,10 @@ def prediction_engine(player_list):
         weighted_desc_prediction0 = desc_say * (desc_pred_prob[index][0])
         weighted_desc_prediction1 = desc_say * (desc_pred_prob[index][1])
 
-        mean_weighted_prediction0 = (weighted_mlp_prediction0 + weighted_nb_prediction0 + weighted_svm_prediction0 + weighted_desc_prediction0 ) / 4
-        mean_weighted_prediction1 = (weighted_mlp_prediction1 + weighted_nb_prediction1 + weighted_svm_prediction1 + weighted_desc_prediction1) / 4
+        mean_weighted_prediction0 = (weighted_mlp_prediction0 + weighted_nb_prediction0 +
+                                     weighted_svm_prediction0 + weighted_desc_prediction0) / 4
+        mean_weighted_prediction1 = (weighted_mlp_prediction1 + weighted_nb_prediction1 +
+                                     weighted_svm_prediction1 + weighted_desc_prediction1) / 4
 
     # print('Mean Weighted 0 :', mean_weighted_prediction0)
     # print('Mean Weighted 1 :', mean_weighted_prediction1)
@@ -288,7 +302,7 @@ def prediction_engine(player_list):
 
 
 def analyse_players(players):
-    selected_players=[]
+    selected_players = []
     with connection.cursor() as cursor:
         for player in players:
             sql = ('select * from sri_lanka where id=%s')
@@ -296,21 +310,24 @@ def analyse_players(players):
             result = cursor.fetchall()
             print(result)
             selected_players.append(built_features(result))
-        
+
         print(selected_players)
-        
-        selected_players = scale_features(selected_players, max_career,max_recent,max_away,max_home)
+
+        selected_players = scale_features(
+            selected_players, max_career, max_recent, max_away, max_home)
         predictions = prediction_engine(selected_players)
 
         return predictions
 
+
 @app.route('/players')
 def get_players():
-  response = jsonify(get_player_pool(connection)) 
-  response.headers.add("Access-Control-Allow-Origin", "*")
-  return response
+    response = jsonify(get_player_pool(connection))
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response
 
-@app.route('/selectedPlayers/',methods = ['POST'])
+
+@app.route('/selectedPlayers/', methods=['POST'])
 @cross_origin(origin='**')
 def selected_players():
     # print(request.get_jsclearon())
@@ -319,5 +336,6 @@ def selected_players():
     return response
     # print('fuck')
 
+
 if __name__ == '__main__':
-    app.run(debug = True)
+    app.run(debug=True)
