@@ -10,11 +10,11 @@ class Player:
         self.overall_100s = overall_100s
         self.overall_50s = overall_50s
 
-    def calculate_overall_score(self, matches, innings, hundreds, fifties, average):
-        if(innings <= 0):
+    def calculate_overall_score(self):
+        if(self.overall_innigs <= 0):
             return 0.0
         else:
-            u = innings/matches
-            v = (20 * hundreds) + (5 * fifties)
-            w = (0.3 * v) + (0.7 * average)
+            u = self.overall_innigs/self.overall_matches
+            v = (20 * self.overall_100s) + (5 * self.overall_50s)
+            w = (0.3 * v) + (0.7 * self.overall_average)
             return u * w

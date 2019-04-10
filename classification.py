@@ -19,6 +19,7 @@ from sklearn import preprocessing
 from flask import Flask, request
 from flask import jsonify
 from flask_cors import CORS, cross_origin
+from interntional_player import International_Player
 
 app = Flask(__name__)
 # cors = CORS(app, resources={r"/selectedPlayers": {"origins": "*"}})
@@ -246,17 +247,13 @@ def get_player_pool(connection):
 
 def built_features(player):
 
-    career_score = batsmen_model(player[0]['overall_matches'], player[0]['overall_innings'],
-                                 player[0]['overall_average'], player[0]['overall_100s'], player[0]['overall_50s'])
+    career_score = player.calculate_overall_score()
 
-    away_score = batsmen_model(player[0]['away_matches'], player[0]['away_innings'],
-                               player[0]['away_average'], player[0]['away_100s'], player[0]['away_50s'])
+    away_score = player.calculate_away_score()
 
-    home_score = batsmen_model(player[0]['home_matches'], player[0]['home_innings'],
-                               player[0]['home_average'], player[0]['home_100s'], player[0]['home_50s'])
+    home_score = player.calculate_home_score()
 
-    recent_score = batsmen_model(player[0]['form_matches'], player[0]['form_innings'],
-                                 player[0]['form_average'], player[0]['form_100s'], player[0]['form_50s'])
+    recent_score = player.calculate_recent_score()
 
     return [career_score, recent_score, away_score, home_score]
 
@@ -300,6 +297,14 @@ def prediction_engine(player_list):
 
     return final_predictions
 
+def build_player(player):
+    in_player = International_Player(player.id, player.name, player.overall_matches, player.overall_innings, player.overall_runs, player.overall_average,
+        player.overall_strike_rate, player.overall_100s, player.overall_50s, player.home_matches, player.home_innings, player.home_runs, player.home_average,
+        player.home_strike_rate, player.home_100s, player.home_50s, player.away_matches, player.away_innings, player.away_runs, player.away_average, player.away_strike_rate,
+        player.away_100s, player.away_50s, player.form_matches, player.form_innings, player.form_runs, player.form_average, player.form_strike_rate, player.form_100s, player.form_50s )
+    return in_player
+
+
 
 def analyse_players(players):
     selected_players = []
@@ -308,7 +313,7 @@ def analyse_players(players):
             sql = ('select * from sri_lanka where id=%s')
             cursor.execute(sql, player)
             result = cursor.fetchall()
-            print(result)
+            player = build_player(result)
             selected_players.append(built_features(result))
 
         print(selected_players)

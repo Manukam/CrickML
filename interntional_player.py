@@ -29,29 +29,29 @@ class International_Player(Player):
         self.form_100s = form_100s
         self.form_50s = form_50s
 
-    def calculate_home_score(self, matches, innings, runs, average, strike_rate, hundreds, fifties):
-        if(innings <= 0):
+    def calculate_home_score(self):
+        if(self.overall_innigs <= 0):
             return 0.0
         else:
-            u = innings/matches
-            v = (20 * hundreds) + (5 * fifties)
-            w = (0.3 * v) + (0.7 * average)
+            u = self.overall_innigs/self.overall_matches
+            v = (20 * self.overall_100s) + (5 * self.overall_50s)
+            w = (0.3 * v) + (0.7 * self.overall_average)
             return u * w
 
-    def calculate_away_score(self, matches, innings, runs, average, strike_rate, hundreds, fifties):
-        if(innings <= 0):
+    def calculate_away_score(self):
+        if(self.overall_innigs <= 0):
             return 0.0
         else:
-            u = innings/matches
-            v = (20 * hundreds) + (5 * fifties)
-            w = (0.3 * v) + (0.7 * average)
+            u = self.overall_innigs/self.overall_matches
+            v = (20 * self.overall_100s) + (5 * self.overall_50s)
+            w = (0.3 * v) + (0.7 * self.overall_average)
             return u * w
 
-    def calculate_recent_scrore(self, matches, innings, runs, average, strike_rate, hundreds, fifties):
-        if(innings <= 0):
+    def calculate_recent_scrore(self):
+        if(self.overall_innigs <= 0):
             return 0.0
         else:
-            u = innings/matches
-            v = (20 * hundreds) + (5 * fifties)
-            w = (0.3 * v) + (0.7 * average)
+            u = self.overall_innigs/self.overall_matches
+            v = (20 * self.overall_100s) + (5 * self.overall_50s)
+            w = (0.3 * v) + (0.7 * self.overall_average)
             return u * w
