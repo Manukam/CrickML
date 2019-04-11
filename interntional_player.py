@@ -47,7 +47,7 @@ class International_Player(Player):
             w = (0.3 * v) + (0.7 * self.overall_average)
             return u * w
 
-    def calculate_recent_scrore(self):
+    def calculate_recent_score(self):
         if(self.overall_innigs <= 0):
             return 0.0
         else:

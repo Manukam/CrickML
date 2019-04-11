@@ -298,10 +298,11 @@ def prediction_engine(player_list):
     return final_predictions
 
 def build_player(player):
-    in_player = International_Player(player.id, player.name, player.overall_matches, player.overall_innings, player.overall_runs, player.overall_average,
-        player.overall_strike_rate, player.overall_100s, player.overall_50s, player.home_matches, player.home_innings, player.home_runs, player.home_average,
-        player.home_strike_rate, player.home_100s, player.home_50s, player.away_matches, player.away_innings, player.away_runs, player.away_average, player.away_strike_rate,
-        player.away_100s, player.away_50s, player.form_matches, player.form_innings, player.form_runs, player.form_average, player.form_strike_rate, player.form_100s, player.form_50s )
+    print(player)
+    in_player = International_Player(player["id"], player['player_name'], player['overall_matches'], player['overall_innings'], player['overall_runs'], player['overall_average'],
+        player['overall_strike_rate'], player['overall_100s'], player['overall_50s'], player['home_matches'], player['home_innings'], player['home_runs'], player['home_average'],
+        player['home_strike_rate'], player['home_100s'], player['home_50s'], player['away_matches'], player['away_innings'], player['away_runs'], player['away_average'], player['away_strike_rate'],
+        player['away_100s'], player['away_50s'], player['form_matches'], player['form_innings'], player['form_runs'], player['form_average'], player['form_strike_rate'], player['form_100s'], player['form_50s'] )
     return in_player
 
 
@@ -313,8 +314,9 @@ def analyse_players(players):
             sql = ('select * from sri_lanka where id=%s')
             cursor.execute(sql, player)
             result = cursor.fetchall()
-            player = build_player(result)
-            selected_players.append(built_features(result))
+            # print(result[0])
+            player = build_player(result[0])
+            selected_players.append(built_features(player))
 
         print(selected_players)
 

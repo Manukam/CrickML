@@ -1,7 +1,7 @@
 class Player:
     def __init__(self, id, name, overall_matches, overall_innings, overall_runs, overall_average, overall_strike_rate, overall_100s, overall_50s):
-        self.id = id
-        self.name = name
+        self.player_id = id
+        self.player_name = name
         self.overall_matches = overall_matches
         self.overall_innigs = overall_innings
         self.overall_runs = overall_runs
