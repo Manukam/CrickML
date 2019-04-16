@@ -130,29 +130,35 @@ def scale_features(players, max_career, max_recent, max_away, max_home):
 
     return players
 
+def acceptance_rate(prediction,test_data):
+    error_rate = 0
+    for index, pred in enumerate(prediction):
+        if(pred != test_data[index]):
+            error_rate += 1
+    return 1/2 * (math.log((1-(error_rate/len(prediction)))/(error_rate/len(prediction))))
 
 def initialise():
     # Connect to the database
     connection = pymysql.connect(host='localhost',
                                  user='root',
-                                 password='',
+                                 password='root',
                                  db='crickml',
                                  charset='utf8mb4',
                                  cursorclass=pymysql.cursors.DictCursor)
-    player_list_2011 = []
-    player_list_2013 = []
-    player_list_2015 = []
-    player_list_2017 = []
 
-    performance_list_2011 = []
-    performance_list_2013 = []
-    performance_list_2015 = []
-    performance_list_2017 = []
+    #Fetch data for features
+
+    print("Fetching player data for Features.....")
 
     player_list_2011 = fetch_data_pre('SELECT * FROM pre_wc_2011', connection)
     player_list_2015 = fetch_data_pre('SELECT * FROM pre_wc_2015', connection)
     player_list_2013 = fetch_data_pre('SELECT * FROM pre_ct_2013', connection)
     player_list_2017 = fetch_data_pre('SELECT * FROM pre_ct_2017', connection)
+    # player_list_2007 = fetch_data_pre('SELECT * FROM pre_ct_2007', connection)
+
+    #Fetch data for labels
+
+    print("Fetching player data for Labels.....")
 
     performance_list_2011 = fetch_data_post(
         'SELECT * FROM wc_2011', connection)
@@ -162,6 +168,8 @@ def initialise():
         'SELECT * FROM ct_2013', connection)
     performance_list_2017 = fetch_data_post(
         'SELECT * FROM ct_2017', connection)
+    # performance_list_2007 = fetch_data_post(
+    #     'SELECT * FROM wc_2007', connection)
 
     np_players = np.concatenate(
         (player_list_2011, player_list_2013, player_list_2015, player_list_2017), axis=0)
@@ -176,56 +184,45 @@ def initialise():
     np_players = scale_features(
         np_players, max_career, max_recent, max_away, max_home)
 
-    feature_train, feature_test, target_train, target_test = train_test_split(
-        np_players, np_performances, test_size=0.20, random_state=42)
 
+
+    #DO train test split using SKLEARN 
+    feature_train, feature_test, target_train, target_test = train_test_split(
+        np_players, np_performances, test_size=0.30, random_state=42)
+
+
+    #Train Naive Bayes model
     gnb = GaussianNB()
     gnb.fit(feature_train, target_train)
     # nb_pred_prob = gnb.predict_proba(feature_test)
     nb_pred = gnb.predict(feature_test)
 
+    #Train Multi-layer Perceptron model
     mlp_clf = MLPClassifier(solver='lbfgs', alpha=1e-5,
                             hidden_layer_sizes=(5, 2), random_state=1)
     mlp_clf.fit(feature_train, target_train)
     # mlp_pred_prob = mlp_clf.predict_proba(feature_test)
     mlp_pred = mlp_clf.predict(feature_test)
 
+    #Train SVM model
     svm_clf = SVC(C=1000, kernel='sigmoid', gamma=0.001, probability=True)
     svm_clf.fit(feature_train, target_train)
     svm_pred = svm_clf.predict(feature_test)
     # svm_pred_prob = svm_clf.predict_proba(feature_test)
 
+    #Train Decision Tree model
     desT = DecisionTreeClassifier(max_depth=2)
     desT.fit(feature_train, target_train)
     desc_pred = desT.predict(feature_test)
     # desc_pred_prob = desT.predict_proba(feature_test)
 
-    miss_nb = 0
-    for index, pred in enumerate(nb_pred):
-        if(pred != target_test[index]):
-            miss_nb += 1
-    amt_say_nb = 1/2 * (math.log((1-(miss_nb/119))/(miss_nb/119)))
+    amt_say_nb = acceptance_rate(nb_pred,target_test)
 
-    miss_mlp = 0
-    for index, pred in enumerate(mlp_pred):
-        if(pred != target_test[index]):
-            miss_mlp += 1
+    amt_say_mlp = acceptance_rate(mlp_pred,target_test)
 
-    amt_say_mlp = 1/2 * (math.log((1-(miss_mlp/119))/(miss_mlp/119)))
+    amt_say_svm = acceptance_rate(svm_pred,target_test)
 
-    miss_svm = 0
-    for index, pred in enumerate(svm_pred):
-        if(pred != target_test[index]):
-            miss_svm += 1
-
-    amt_say_svm = 1/2 * (math.log((1-(miss_svm/119))/(miss_svm/119)))
-
-    miss_desc = 0
-    for index, pred in enumerate(desc_pred):
-        if(pred != target_test[index]):
-            miss_desc += 1
-
-    amt_say_desc = 1/2 * (math.log((1-(miss_desc/119))/(miss_desc/119)))
+    amt_say_desc = acceptance_rate(desc_pred,target_test)
 
     print('Amount of say NB :', amt_say_nb)
     print('Amount of say MLP :', amt_say_mlp)
@@ -270,7 +267,7 @@ def prediction_engine(player_list):
 
     final_predictions = []
 
-    for index, initial_nb_pred in enumerate(nb_pred_prob):
+    for index in enumerate(nb_pred_prob):
         weighted_nb_prediction0 = nb_say * (nb_pred_prob[index][0])
         weighted_nb_prediction1 = nb_say * (nb_pred_prob[index][1])
 
@@ -288,8 +285,6 @@ def prediction_engine(player_list):
         mean_weighted_prediction1 = (weighted_mlp_prediction1 + weighted_nb_prediction1 +
                                      weighted_svm_prediction1 + weighted_desc_prediction1) / 4
 
-    # print('Mean Weighted 0 :', mean_weighted_prediction0)
-    # print('Mean Weighted 1 :', mean_weighted_prediction1)
         if(mean_weighted_prediction0 > mean_weighted_prediction1):
             final_predictions.append(0)
         else:
@@ -297,8 +292,10 @@ def prediction_engine(player_list):
 
     return final_predictions
 
+
+#Build players with provided data.
 def build_player(player):
-    print(player)
+    print("Building player...")
     in_player = International_Player(player["id"], player['player_name'], player['overall_matches'], player['overall_innings'], player['overall_runs'], player['overall_average'],
         player['overall_strike_rate'], player['overall_100s'], player['overall_50s'], player['home_matches'], player['home_innings'], player['home_runs'], player['home_average'],
         player['home_strike_rate'], player['home_100s'], player['home_50s'], player['away_matches'], player['away_innings'], player['away_runs'], player['away_average'], player['away_strike_rate'],
@@ -322,27 +319,25 @@ def analyse_players(players):
 
         selected_players = scale_features(
             selected_players, max_career, max_recent, max_away, max_home)
-        predictions = prediction_engine(selected_players)
+        predictions =   (selected_players)
 
         return predictions
 
 
-@app.route('/players')
+#API Method to iniialise the UI with all the players
+@app.route('/players', methods=['GET'])
 def get_players():
     response = jsonify(get_player_pool(connection))
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
 
-
-@app.route('/selectedPlayers/', methods=['POST'])
+#API Method to accept the selected players and return output predictions and results.
+@app.route('/selected_players/', methods=['POST'])
 @cross_origin(origin='**')
 def selected_players():
-    # print(request.get_jsclearon())
     response = jsonify(analyse_players(request.get_json()))
-    # response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Origin", "*")
     return response
-    # print('fuck')
-
 
 if __name__ == '__main__':
     app.run(debug=True)
