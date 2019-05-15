@@ -19,10 +19,13 @@ from sklearn import preprocessing
 from flask import Flask, request
 from flask import jsonify
 from flask_cors import CORS, cross_origin
-from interntional_player import International_Player
+from ../Classes/interntional_player import International_Player
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
 
 app = Flask(__name__)
 # cors = CORS(app, resources={r"/selectedPlayers": {"origins": "*"}})
+
 
 
 def batsmen_model(matches, innings, average, hundreds, fifties):
@@ -141,7 +144,7 @@ def initialise():
     # Connect to the database
     connection = pymysql.connect(host='localhost',
                                  user='root',
-                                 password='root',
+                                 password='',
                                  db='crickml',
                                  charset='utf8mb4',
                                  cursorclass=pymysql.cursors.DictCursor)
@@ -229,10 +232,10 @@ def initialise():
     print('Amount of say SVM :', amt_say_svm)
     print('Amount of say Descision Tree :', amt_say_desc)
 
-    return connection, gnb, mlp_clf, svm_clf, desT, amt_say_desc, amt_say_mlp, amt_say_nb, amt_say_svm, max_home, max_away, max_recent, max_career
+    return connection, gnb, mlp_clf, svm_clf, desT, amt_say_desc, amt_say_mlp, amt_say_nb, amt_say_svm, max_home, max_away, max_recent, max_career, feature_train, feature_test, target_train, target_test
 
 
-connection, nb, mlp, svm, dest, desc_say, mlp_say, nb_say, svm_say, max_home, max_away, max_recent, max_career = initialise()
+connection, nb, mlp, svm, dest, desc_say, mlp_say, nb_say, svm_say, max_home, max_away, max_recent, max_career, feature_train, feature_test, target_train, target_test = initialise()
 
 
 def get_player_pool(connection):
@@ -254,6 +257,7 @@ def built_features(player):
 
     return [career_score, recent_score, away_score, home_score]
 
+prediction_proba = []
 
 def prediction_engine(player_list):
     nb_pred_prob = nb.predict_proba(player_list)
@@ -267,7 +271,8 @@ def prediction_engine(player_list):
 
     final_predictions = []
 
-    for index in enumerate(nb_pred_prob):
+    for index, initial_nb_pred in enumerate(nb_pred_prob):
+        print(initial_nb_pred)
         weighted_nb_prediction0 = nb_say * (nb_pred_prob[index][0])
         weighted_nb_prediction1 = nb_say * (nb_pred_prob[index][1])
 
@@ -284,6 +289,8 @@ def prediction_engine(player_list):
                                      weighted_svm_prediction0 + weighted_desc_prediction0) / 4
         mean_weighted_prediction1 = (weighted_mlp_prediction1 + weighted_nb_prediction1 +
                                      weighted_svm_prediction1 + weighted_desc_prediction1) / 4
+
+        prediction_proba.append(mean_weighted_prediction1)
 
         if(mean_weighted_prediction0 > mean_weighted_prediction1):
             final_predictions.append(0)
@@ -319,9 +326,23 @@ def analyse_players(players):
 
         selected_players = scale_features(
             selected_players, max_career, max_recent, max_away, max_home)
-        predictions =   (selected_players)
+        predictions =  prediction_engine (selected_players)
 
         return predictions
+
+
+def generate_roc():
+    prediction_engine(feature_test)
+    auc = roc_auc_score(target_test, prediction_proba)
+    print('AUC: %.3f' % auc)
+    fpr, tpr, thresholds = roc_curve(target_test, prediction_proba)
+    plt.plot([0, 1], [0, 1], linestyle='--')
+    plt.plot(fpr, tpr, marker='.')
+    # show the plot
+    plt.show()
+
+
+# generate_roc()
 
 
 #API Method to iniialise the UI with all the players

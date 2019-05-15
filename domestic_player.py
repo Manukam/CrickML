@@ -120,12 +120,16 @@ for player in np_players:
 
 # print(np_players)
 # exit()
+from imblearn.over_sampling import RandomOverSampler
+
+ros = RandomOverSampler(random_state=0)
+np_players_resampled, np_performances_resampled = ros.fit_resample(np_players, np_performances)
 
 feature_train, feature_test, target_train, target_test = train_test_split(
-    np_players, np_performances, test_size=0.20, random_state=42)
+    np_players_resampled, np_performances_resampled, test_size=0.20, random_state=42)
 
-# print(feature_train)
-# print(target_test)
+print(feature_train)
+print(target_test)
 # exit()
 
 svm_clf = SVC(C=1000, kernel='sigmoid', gamma=0.001, probability=True)
