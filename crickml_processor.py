@@ -19,12 +19,13 @@ from sklearn import preprocessing
 from flask import Flask, request
 from flask import jsonify
 from flask_cors import CORS, cross_origin
-from ../Classes/interntional_player import International_Player
+from Classes.interntional_player import International_Player
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score
 
 app = Flask(__name__)
 # cors = CORS(app, resources={r"/selectedPlayers": {"origins": "*"}})
+CORS(app)
 
 
 
@@ -291,11 +292,16 @@ def prediction_engine(player_list):
                                      weighted_svm_prediction1 + weighted_desc_prediction1) / 4
 
         prediction_proba.append(mean_weighted_prediction1)
+        print(mean_weighted_prediction0)
+        print(mean_weighted_prediction1)
+        
 
         if(mean_weighted_prediction0 > mean_weighted_prediction1):
-            final_predictions.append(0)
+            confidence = (nb_pred_prob[index][0] + mlp_pred_prob[index][0] + svm_pred_prob[index][0] + desc_pred_prob[index][0]) / 4
+            final_predictions.append([0, confidence])
         else:
-            final_predictions.append(1)
+            confidence = (nb_pred_prob[index][1] + mlp_pred_prob[index][1] + svm_pred_prob[index][1] + desc_pred_prob[index][1]) / 4
+            final_predictions.append([1, confidence])
 
     return final_predictions
 
@@ -322,13 +328,26 @@ def analyse_players(players):
             player = build_player(result[0])
             selected_players.append(built_features(player))
 
-        print(selected_players)
+        # print(selected_players)
+        # exit()
 
         selected_players = scale_features(
             selected_players, max_career, max_recent, max_away, max_home)
         predictions =  prediction_engine (selected_players)
-
-        return predictions
+        print(players[0])
+        # exit()
+        result_array =  [[0 for x in range(7)] for y in range(len(predictions))] 
+        print(len(result_array))
+        # exit()
+        for index, prediction in enumerate(predictions):
+            result_array[index][0] = players[index]
+            result_array[index][1] = prediction[0]
+            result_array[index][2] = prediction[1]
+            result_array[index][3] = selected_players[index][0]
+            result_array[index][4] = selected_players[index][1]
+            result_array[index][5] = selected_players[index][2]
+            result_array[index][6] = selected_players[index][3]
+        return result_array
 
 
 def generate_roc():
@@ -354,7 +373,7 @@ def get_players():
 
 #API Method to accept the selected players and return output predictions and results.
 @app.route('/selected_players/', methods=['POST'])
-@cross_origin(origin='**')
+# @cross_origin(origin='**')
 def selected_players():
     response = jsonify(analyse_players(request.get_json()))
     response.headers.add("Access-Control-Allow-Origin", "*")

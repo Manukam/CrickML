@@ -120,10 +120,13 @@ for player in np_players:
 
 # print(np_players)
 # exit()
-from imblearn.over_sampling import RandomOverSampler
+from imblearn.over_sampling import SMOTE
 
-ros = RandomOverSampler(random_state=0)
-np_players_resampled, np_performances_resampled = ros.fit_resample(np_players, np_performances)
+# ros = RandomOverSampler(random_state=0)
+# np_players_resampled, np_performances_resampled = ros.fit_resample(np_players, np_performances)
+
+sm = SMOTE(random_state=42)
+np_players_resampled, np_performances_resampled = sm.fit_resample(np_players, np_performances)
 
 feature_train, feature_test, target_train, target_test = train_test_split(
     np_players_resampled, np_performances_resampled, test_size=0.20, random_state=42)
