@@ -20,13 +20,13 @@ from flask import Flask, request
 from flask import jsonify
 from flask_cors import CORS, cross_origin
 from Classes.interntional_player import International_Player
+from domestic_model import domestic_model_initialise
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score
 
 app = Flask(__name__)
 # cors = CORS(app, resources={r"/selectedPlayers": {"origins": "*"}})
 CORS(app)
-
 
 
 def batsmen_model(matches, innings, average, hundreds, fifties):
@@ -134,12 +134,14 @@ def scale_features(players, max_career, max_recent, max_away, max_home):
 
     return players
 
-def acceptance_rate(prediction,test_data):
+
+def acceptance_rate(prediction, test_data):
     error_rate = 0
     for index, pred in enumerate(prediction):
         if(pred != test_data[index]):
             error_rate += 1
     return 1/2 * (math.log((1-(error_rate/len(prediction)))/(error_rate/len(prediction))))
+
 
 def initialise():
     # Connect to the database
@@ -150,7 +152,7 @@ def initialise():
                                  charset='utf8mb4',
                                  cursorclass=pymysql.cursors.DictCursor)
 
-    #Fetch data for features
+    # Fetch data for features
 
     print("Fetching player data for Features.....")
 
@@ -160,7 +162,7 @@ def initialise():
     player_list_2017 = fetch_data_pre('SELECT * FROM pre_ct_2017', connection)
     # player_list_2007 = fetch_data_pre('SELECT * FROM pre_ct_2007', connection)
 
-    #Fetch data for labels
+    # Fetch data for labels
 
     print("Fetching player data for Labels.....")
 
@@ -188,45 +190,42 @@ def initialise():
     np_players = scale_features(
         np_players, max_career, max_recent, max_away, max_home)
 
-
-
-    #DO train test split using SKLEARN 
+    # DO train test split using SKLEARN
     feature_train, feature_test, target_train, target_test = train_test_split(
         np_players, np_performances, test_size=0.30, random_state=42)
 
-
-    #Train Naive Bayes model
+    # Train Naive Bayes model
     gnb = GaussianNB()
     gnb.fit(feature_train, target_train)
     # nb_pred_prob = gnb.predict_proba(feature_test)
     nb_pred = gnb.predict(feature_test)
 
-    #Train Multi-layer Perceptron model
+    # Train Multi-layer Perceptron model
     mlp_clf = MLPClassifier(solver='lbfgs', alpha=1e-5,
                             hidden_layer_sizes=(5, 2), random_state=1)
     mlp_clf.fit(feature_train, target_train)
     # mlp_pred_prob = mlp_clf.predict_proba(feature_test)
     mlp_pred = mlp_clf.predict(feature_test)
 
-    #Train SVM model
+    # Train SVM model
     svm_clf = SVC(C=1000, kernel='sigmoid', gamma=0.001, probability=True)
     svm_clf.fit(feature_train, target_train)
     svm_pred = svm_clf.predict(feature_test)
     # svm_pred_prob = svm_clf.predict_proba(feature_test)
 
-    #Train Decision Tree model
+    # Train Decision Tree model
     desT = DecisionTreeClassifier(max_depth=2)
     desT.fit(feature_train, target_train)
     desc_pred = desT.predict(feature_test)
     # desc_pred_prob = desT.predict_proba(feature_test)
 
-    amt_say_nb = acceptance_rate(nb_pred,target_test)
+    amt_say_nb = acceptance_rate(nb_pred, target_test)
 
-    amt_say_mlp = acceptance_rate(mlp_pred,target_test)
+    amt_say_mlp = acceptance_rate(mlp_pred, target_test)
 
-    amt_say_svm = acceptance_rate(svm_pred,target_test)
+    amt_say_svm = acceptance_rate(svm_pred, target_test)
 
-    amt_say_desc = acceptance_rate(desc_pred,target_test)
+    amt_say_desc = acceptance_rate(desc_pred, target_test)
 
     print('Amount of say NB :', amt_say_nb)
     print('Amount of say MLP :', amt_say_mlp)
@@ -258,7 +257,9 @@ def built_features(player):
 
     return [career_score, recent_score, away_score, home_score]
 
+
 prediction_proba = []
+
 
 def prediction_engine(player_list):
     nb_pred_prob = nb.predict_proba(player_list)
@@ -294,27 +295,29 @@ def prediction_engine(player_list):
         prediction_proba.append(mean_weighted_prediction1)
         print(mean_weighted_prediction0)
         print(mean_weighted_prediction1)
-        
 
         if(mean_weighted_prediction0 > mean_weighted_prediction1):
-            confidence = (nb_pred_prob[index][0] + mlp_pred_prob[index][0] + svm_pred_prob[index][0] + desc_pred_prob[index][0]) / 4
+            confidence = (nb_pred_prob[index][0] + mlp_pred_prob[index]
+                          [0] + svm_pred_prob[index][0] + desc_pred_prob[index][0]) / 4
             final_predictions.append([0, confidence])
         else:
-            confidence = (nb_pred_prob[index][1] + mlp_pred_prob[index][1] + svm_pred_prob[index][1] + desc_pred_prob[index][1]) / 4
+            confidence = (nb_pred_prob[index][1] + mlp_pred_prob[index]
+                          [1] + svm_pred_prob[index][1] + desc_pred_prob[index][1]) / 4
             final_predictions.append([1, confidence])
 
     return final_predictions
 
 
-#Build players with provided data.
+# Build players with provided data.
 def build_player(player):
     print("Building player...")
     in_player = International_Player(player["id"], player['player_name'], player['overall_matches'], player['overall_innings'], player['overall_runs'], player['overall_average'],
-        player['overall_strike_rate'], player['overall_100s'], player['overall_50s'], player['home_matches'], player['home_innings'], player['home_runs'], player['home_average'],
-        player['home_strike_rate'], player['home_100s'], player['home_50s'], player['away_matches'], player['away_innings'], player['away_runs'], player['away_average'], player['away_strike_rate'],
-        player['away_100s'], player['away_50s'], player['form_matches'], player['form_innings'], player['form_runs'], player['form_average'], player['form_strike_rate'], player['form_100s'], player['form_50s'] )
+                                     player['overall_strike_rate'], player['overall_100s'], player['overall_50s'], player[
+                                         'home_matches'], player['home_innings'], player['home_runs'], player['home_average'],
+                                     player['home_strike_rate'], player['home_100s'], player['home_50s'], player['away_matches'], player[
+        'away_innings'], player['away_runs'], player['away_average'], player['away_strike_rate'],
+        player['away_100s'], player['away_50s'], player['form_matches'], player['form_innings'], player['form_runs'], player['form_average'], player['form_strike_rate'], player['form_100s'], player['form_50s'])
     return in_player
-
 
 
 def analyse_players(players):
@@ -333,10 +336,10 @@ def analyse_players(players):
 
         selected_players = scale_features(
             selected_players, max_career, max_recent, max_away, max_home)
-        predictions =  prediction_engine (selected_players)
+        predictions = prediction_engine(selected_players)
         print(players[0])
         # exit()
-        result_array =  [[0 for x in range(7)] for y in range(len(predictions))] 
+        result_array = [[0 for x in range(7)] for y in range(len(predictions))]
         print(len(result_array))
         # exit()
         for index, prediction in enumerate(predictions):
@@ -364,20 +367,21 @@ def generate_roc():
 # generate_roc()
 
 
-#API Method to iniialise the UI with all the players
+# API Method to iniialise the UI with all the players
 @app.route('/players', methods=['GET'])
 def get_players():
     response = jsonify(get_player_pool(connection))
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
 
-#API Method to accept the selected players and return output predictions and results.
+# API Method to accept the selected players and return output predictions and results.
 @app.route('/selected_players/', methods=['POST'])
 # @cross_origin(origin='**')
 def selected_players():
     response = jsonify(analyse_players(request.get_json()))
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
+
 
 if __name__ == '__main__':
     app.run(debug=True)
