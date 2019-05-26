@@ -21,6 +21,10 @@ from flask import jsonify
 from flask_cors import CORS, cross_origin
 from Classes.interntional_player import International_Player
 from domestic_model import domestic_model_initialise
+from domestic_model import build_domestic_player
+from domestic_model import build_domestic_features
+from domestic_model import get_domestic_predictions
+from domestic_model import scale_domestic_features
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score
 
@@ -271,6 +275,11 @@ def prediction_engine(player_list):
     # desc_pred = dest.predict(player_list)
     desc_pred_prob = dest.predict_proba(player_list)
 
+    return nb_pred_prob, mlp_pred_prob, svm_pred_prob, desc_pred_prob
+
+
+def crickml_algo(nb_pred_prob, mlp_pred_prob, svm_pred_prob, desc_pred_prob):
+
     final_predictions = []
 
     for index, initial_nb_pred in enumerate(nb_pred_prob):
@@ -322,27 +331,39 @@ def build_player(player):
 
 def analyse_players(players):
     selected_players = []
+    # selected_players_domestic = []
     with connection.cursor() as cursor:
         for player in players:
             sql = ('select * from sri_lanka where id=%s')
             cursor.execute(sql, player)
             result = cursor.fetchall()
-            # print(result[0])
-            player = build_player(result[0])
-            selected_players.append(built_features(player))
-
-        # print(selected_players)
-        # exit()
+            if(result[0]['overall_matches'] < 5):
+                domestic_player = build_domestic_player(result[0])
+                domestic_player_features = build_domestic_features(
+                    domestic_player)
+                scaled_domestic_features = scale_domestic_features(
+                    domestic_player_features)
+                nb_pred_prob_dom, mlp_pred_prob_dom, svm_pred_prob_dom, desc_pred_prob_dom = get_domestic_predictions(
+                    scaled_domestic_features)
+            else:
+                player = build_player(result[0])
+                selected_players.append(built_features(player))
 
         selected_players = scale_features(
             selected_players, max_career, max_recent, max_away, max_home)
-        predictions = prediction_engine(selected_players)
-        print(players[0])
+        nb_pred_prob, mlp_pred_prob, svm_pred_prob, desc_pred_prob = prediction_engine(
+            selected_players)
+        total_predictions = crickml_algo(
+            nb_pred_prob, mlp_pred_prob, svm_pred_prob, desc_pred_prob)
+        total_predictions.append(crickml_algo(
+            nb_pred_prob_dom, mlp_pred_prob_dom, svm_pred_prob_dom, desc_pred_prob_dom))
+        # print(players[0])
         # exit()
-        result_array = [[0 for x in range(7)] for y in range(len(predictions))]
+        result_array = [[0 for x in range(7)]
+                        for y in range(len(total_predictions))]
         print(len(result_array))
         # exit()
-        for index, prediction in enumerate(predictions):
+        for index, prediction in enumerate(total_predictions):
             result_array[index][0] = players[index]
             result_array[index][1] = prediction[0]
             result_array[index][2] = prediction[1]

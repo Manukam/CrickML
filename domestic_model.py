@@ -11,6 +11,7 @@ from sklearn.tree import DecisionTreeClassifier
 import math as math
 from sklearn.neural_network import MLPClassifier
 from imblearn.over_sampling import SMOTE
+from Classes.domestic_player import Domestic_Player
 
 
 def batsmen_performance_model(matches, innings, average, hundreds, fifties):
@@ -112,6 +113,8 @@ def domestic_model_initialise():
     feature_train, feature_test, target_train, target_test = train_test_split(
     np_players_resampled, np_performances_resampled, test_size=0.20, random_state=42)
 
+    print("Training Domestoc Models")
+    print(feature_train)
     svm_clf = SVC(C=1000, kernel='sigmoid', gamma=0.001, probability=True)
     svm_clf.fit(feature_train, target_train)
     svm_pred = svm_clf.predict(feature_test)
@@ -176,11 +179,38 @@ def domestic_model_initialise():
     print('Amount of say SVM :', amt_say_svm)
     print('Amount of say Descision Tree :', amt_say_desc)
 
-    return connection, gnb, mlp_clf, svm_clf, desT, amt_say_desc, amt_say_mlp, amt_say_nb, amt_say_svm, max_home, max_away, max_recent, max_career, feature_train, feature_test, target_train, target_test
+    return connection, gnb, mlp_clf, svm_clf, desT, amt_say_desc, amt_say_mlp, amt_say_nb, amt_say_svm, max_batting_pos, max_milestone_score, feature_train, feature_test, target_train, target_test
 
-connection, nb, mlp, svm, dest, desc_say, mlp_say, nb_say, svm_say, max_home, max_away, max_recent, max_career, feature_train, feature_test, target_train, target_test = domestic_model_initialise()
+connection, nb, mlp, svm, dest, desc_say, mlp_say, nb_say, svm_say, max_batting_pos, max_milestone_score, feature_train, feature_test, target_train, target_test = domestic_model_initialise()
 
+def build_domestic_player(player):
+    print("Building player...")
+    dom_player = Domestic_Player(player["id"], player['player_name'], player['overall_matches'], player['overall_innings'], player['overall_runs'], player['overall_average'],
+                                     player['overall_strike_rate'], player['overall_100s'], player['overall_50s'])
+    return dom_player
 
+def scale_domestic_features(domestic_features, max_batting_pos, max_milestone_score):
+    normalized_batting_pos_score = domestic_features[0]/max_batting_pos
+    normalized_batting_milestone_score = domestic_features[1]/max_milestone_score
+    return [normalized_batting_milestone_score, normalized_batting_pos_score]
+
+def build_domestic_features(player):
+    domestic_score = player.calculate_domestic_score()
+    pos_score = player.overall_strike_rate * player.overall_average
+    return [ pos_score,domestic_score ]
+
+def get_domestic_predictions(domestic_player):
+    print(domestic_player)
+    nb_pred_prob = nb.predict_proba(domestic_player)
+    # nb_pred = nb.predict(player_list)
+    mlp_pred_prob = mlp.predict_proba(domestic_player)
+    # mlp_pred = mlp.predict(player_list)
+    # svm_pred = svm.predict(player_list)
+    svm_pred_prob = svm.predict_proba(domestic_player)
+    # desc_pred = dest.predict(player_list)
+    desc_pred_prob = dest.predict_proba(domestic_player)
+
+    return nb_pred_prob, mlp_pred_prob, svm_pred_prob, desc_pred_prob
 # final_predictions = []
 
 # for index, initial_nb_pred in enumerate(nb_pred_prob):
