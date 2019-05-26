@@ -114,7 +114,7 @@ def domestic_model_initialise():
     np_players_resampled, np_performances_resampled, test_size=0.20, random_state=42)
 
     print("Training Domestoc Models")
-    print(feature_train)
+    print(feature_test)
     svm_clf = SVC(C=1000, kernel='sigmoid', gamma=0.001, probability=True)
     svm_clf.fit(feature_train, target_train)
     svm_pred = svm_clf.predict(feature_test)
@@ -189,7 +189,7 @@ def build_domestic_player(player):
                                      player['overall_strike_rate'], player['overall_100s'], player['overall_50s'])
     return dom_player
 
-def scale_domestic_features(domestic_features, max_batting_pos, max_milestone_score):
+def scale_domestic_features(domestic_features):
     normalized_batting_pos_score = domestic_features[0]/max_batting_pos
     normalized_batting_milestone_score = domestic_features[1]/max_milestone_score
     return [normalized_batting_milestone_score, normalized_batting_pos_score]

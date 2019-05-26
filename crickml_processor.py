@@ -331,7 +331,9 @@ def build_player(player):
 
 def analyse_players(players):
     selected_players = []
-    # selected_players_domestic = []
+    selected_players_domestic = []
+    selected_players_domestic_prediction = []
+    total_predictions = []
     with connection.cursor() as cursor:
         for player in players:
             sql = ('select * from sri_lanka where id=%s')
@@ -343,27 +345,42 @@ def analyse_players(players):
                     domestic_player)
                 scaled_domestic_features = scale_domestic_features(
                     domestic_player_features)
+                selected_players_domestic.append([0,0,0,0,scaled_domestic_features[0], scaled_domestic_features[1]])
+                selected_players_domestic_prediction.append(scaled_domestic_features)
+                print("scaled domestic features")
+                # print(selected_players_domestic)
+                selected_players_domestic_prediction = np.array(selected_players_domestic_prediction)
                 nb_pred_prob_dom, mlp_pred_prob_dom, svm_pred_prob_dom, desc_pred_prob_dom = get_domestic_predictions(
-                    scaled_domestic_features)
+                    selected_players_domestic_prediction)
             else:
                 player = build_player(result[0])
                 selected_players.append(built_features(player))
 
-        selected_players = scale_features(
-            selected_players, max_career, max_recent, max_away, max_home)
-        nb_pred_prob, mlp_pred_prob, svm_pred_prob, desc_pred_prob = prediction_engine(
-            selected_players)
-        total_predictions = crickml_algo(
-            nb_pred_prob, mlp_pred_prob, svm_pred_prob, desc_pred_prob)
-        total_predictions.append(crickml_algo(
-            nb_pred_prob_dom, mlp_pred_prob_dom, svm_pred_prob_dom, desc_pred_prob_dom))
+        if(len(selected_players) > 0):
+
+            selected_players = scale_features(
+                selected_players, max_career, max_recent, max_away, max_home)
+
+            nb_pred_prob, mlp_pred_prob, svm_pred_prob, desc_pred_prob = prediction_engine(
+                selected_players)
+
+            total_predictions = crickml_algo(
+                nb_pred_prob, mlp_pred_prob, svm_pred_prob, desc_pred_prob)
+
+        if(len(selected_players_domestic) > 0 ):
+            domestic_predictions = crickml_algo(
+                nb_pred_prob_dom, mlp_pred_prob_dom, svm_pred_prob_dom, desc_pred_prob_dom)
+            total_predictions.append(domestic_predictions[0])
+            selected_players.append(selected_players_domestic[0])
         # print(players[0])
         # exit()
-        result_array = [[0 for x in range(7)]
+        result_array = [[0 for x in range(8)]
                         for y in range(len(total_predictions))]
-        print(len(result_array))
+        print(selected_players)
         # exit()
         for index, prediction in enumerate(total_predictions):
+            print("starting final output processing")
+            # print(prediction)
             result_array[index][0] = players[index]
             result_array[index][1] = prediction[0]
             result_array[index][2] = prediction[1]
@@ -371,6 +388,10 @@ def analyse_players(players):
             result_array[index][4] = selected_players[index][1]
             result_array[index][5] = selected_players[index][2]
             result_array[index][6] = selected_players[index][3]
+            if(selected_players[index][1] > 0):
+                result_array[index][7] = 1
+            else:
+                result_array[index][7] = 0
         return result_array
 
 
