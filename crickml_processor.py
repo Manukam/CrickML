@@ -305,14 +305,14 @@ def crickml_algo(nb_pred_prob, mlp_pred_prob, svm_pred_prob, desc_pred_prob):
         print(mean_weighted_prediction0)
         print(mean_weighted_prediction1)
 
-        if(mean_weighted_prediction0 > mean_weighted_prediction1):
-            confidence = (nb_pred_prob[index][0] + mlp_pred_prob[index]
-                          [0] + svm_pred_prob[index][0] + desc_pred_prob[index][0]) / 4
-            final_predictions.append([0, confidence])
-        else:
-            confidence = (nb_pred_prob[index][1] + mlp_pred_prob[index]
+        # if(mean_weighted_prediction0 > mean_weighted_prediction1):
+        #     confidence = (nb_pred_prob[index][0] + mlp_pred_prob[index]
+        #                   [0] + svm_pred_prob[index][0] + desc_pred_prob[index][0]) / 4
+        #     final_predictions.append([0, confidence])
+        # else:
+        confidence = (nb_pred_prob[index][1] + mlp_pred_prob[index]
                           [1] + svm_pred_prob[index][1] + desc_pred_prob[index][1]) / 4
-            final_predictions.append([1, confidence])
+        final_predictions.append([1, confidence])
 
     return final_predictions
 
@@ -345,7 +345,7 @@ def analyse_players(players):
                     domestic_player)
                 scaled_domestic_features = scale_domestic_features(
                     domestic_player_features)
-                selected_players_domestic.append([0,0,0,0,scaled_domestic_features[0], scaled_domestic_features[1]])
+                selected_players_domestic.append([0,0,scaled_domestic_features[0], scaled_domestic_features[1]])
                 selected_players_domestic_prediction.append(scaled_domestic_features)
                 print("scaled domestic features")
                 # print(selected_players_domestic)
