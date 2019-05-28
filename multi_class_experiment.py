@@ -204,12 +204,12 @@ def initialise():
     max_away = np.max(np_players[:, 2])
     max_home = np.max(np_players[:, 3])
 
-    # np_players = scale_features(
-    #     np_players, max_career, max_recent, max_away, max_home)
-    from sklearn.preprocessing import StandardScaler
+    np_players = scale_features(
+        np_players, max_career, max_recent, max_away, max_home)
+    # from sklearn.preprocessing import StandardScaler
 
-    sc = StandardScaler()  
-    np_players = sc.fit_transform(np_players)  
+    # sc = StandardScaler()  
+    # np_players = sc.fit_transform(np_players)  
     # X_test = sc.transform(X_test)  
 
     sm = SMOTE(random_state=41)
@@ -220,9 +220,9 @@ def initialise():
     feature_train, feature_test, target_train, target_test = train_test_split(
         np_players_resampled, np_performances_resampled, test_size=0.30, random_state=42)
 
-    pca = PCA(n_components=2)  
-    feature_train = pca.fit_transform(feature_train)  
-    feature_test = pca.transform(feature_test)  
+    # pca = PCA(n_components=2)  
+    # feature_train = pca.fit_transform(feature_train)  
+    # feature_test = pca.transform(feature_test)  
 
     # Train Naive Bayes model
     gnb = GaussianNB()
@@ -231,16 +231,16 @@ def initialise():
     nb_pred = gnb.predict(feature_test)
     print(classification_report(target_test, nb_pred))
     acc = accuracy_score(nb_pred, target_test)
-    # print(acc)
+    print(acc)
 
     # exit()
 
     # Train Multi-layer Perceptron model
-    # mlp_clf = MLPClassifier(solver='lbfgs', alpha=1e-5,
-    #                         hidden_layer_sizes=(5, 2), random_state=1)
-    # mlp_clf.fit(feature_train, target_train)
-    # # mlp_pred_prob = mlp_clf.predict_proba(feature_test)
-    # mlp_pred = mlp_clf.predict(feature_test)
+    mlp_clf = MLPClassifier(solver='lbfgs', alpha=1e-06,
+                            hidden_layer_sizes=(13), random_state=7, max_iter=1100)
+    mlp_clf.fit(feature_train, target_train)
+    # mlp_pred_prob = mlp_clf.predict_proba(feature_test)
+    mlp_pred = mlp_clf.predict(feature_test)
     # print(classification_report(target_test, mlp_pred))
     # acc = accuracy_score(mlp_pred, target_test)
     # print(acc)
@@ -296,7 +296,7 @@ def initialise():
     # exit()
 
     # Train Decision Tree model
-    desT = DecisionTreeClassifier(max_depth=10)
+    desT = DecisionTreeClassifier(max_depth=11)
     desT.fit(feature_train, target_train)
     desc_pred = desT.predict(feature_test)
     desc_pred_prob = desT.predict_proba(feature_test)
