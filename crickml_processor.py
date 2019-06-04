@@ -27,6 +27,7 @@ from domestic_model import get_domestic_predictions
 from domestic_model import scale_domestic_features
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score
+from multi_class_experiment import prediction_class_based
 
 app = Flask(__name__)
 # cors = CORS(app, resources={r"/selectedPlayers": {"origins": "*"}})
@@ -330,6 +331,7 @@ def build_player(player):
 
 
 def analyse_players(players):
+    print("Analysing player - Score based")
     selected_players = []
     selected_players_domestic = []
     selected_players_domestic_prediction = []
@@ -374,8 +376,8 @@ def analyse_players(players):
             selected_players.append(selected_players_domestic[0])
         # print(players[0])
         # exit()
-        result_array = [[0 for x in range(8)]
-                        for y in range(len(total_predictions))]
+        result_array = [[0 for x in range(9)]
+                        for y in range(len(total_predictions)+1)]
         print(selected_players)
         # exit()
         for index, prediction in enumerate(total_predictions):
@@ -392,8 +394,64 @@ def analyse_players(players):
                 result_array[index][7] = 1
             else:
                 result_array[index][7] = 0
+        result_array[index+1]= 1   
         return result_array
 
+def generate_class_prediction(players):
+    selected_players = []
+    # selected_players_domestic = []
+    # selected_players_domestic_prediction = []
+    # total_predictions = []
+    with connection.cursor() as cursor:
+        for player in players:
+            sql = ('select * from sri_lanka where id=%s')
+            cursor.execute(sql, player)
+            result = cursor.fetchall()
+            player = build_player(result[0])
+            selected_players.append(built_features(player))
+
+        if(len(selected_players) > 0):
+
+            selected_players = scale_features(
+                selected_players, max_career, max_recent, max_away, max_home)
+
+            # nb_pred_prob, mlp_pred_prob, svm_pred_prob, desc_pred_prob = prediction_engine(
+            #     selected_players)
+
+            predictions = prediction_class_based(selected_players)
+
+            # total_predictions = crickml_algo(
+            #     nb_pred_prob, mlp_pred_prob, svm_pred_prob, desc_pred_prob)
+
+        # if(len(selected_players_domestic) > 0 ):
+        #     domestic_predictions = crickml_algo(
+        #         nb_pred_prob_dom, mlp_pred_prob_dom, svm_pred_prob_dom, desc_pred_prob_dom)
+        #     total_predictions.append(domestic_predictions[0])
+        #     selected_players.append(selected_players_domestic[0])
+        # # print(players[0])
+        # # exit()
+        result_array = [[0 for x in range(6)]
+                        for y in range(len(predictions)+1)]
+        # print(selected_players)
+        # exit()
+        for index, prediction in enumerate(predictions):
+            print("starting final output processing - Class based")
+            # print(prediction)
+            result_array[index][0] = players[index]
+            result_array[index][1] = prediction[0]
+            # result_array[index][2] = prediction[1]
+            result_array[index][2] = selected_players[index][0]
+            result_array[index][3] = selected_players[index][1]
+            result_array[index][4] = selected_players[index][2]
+            result_array[index][5] = selected_players[index][3]
+            # if(selected_players[index][1] > 0):
+            #     result_array[index][7] = 1
+            # else:
+            #     result_array[index][7] = 0
+        # print(result_array)
+        # exit()
+        result_array[index+1]= 2   
+        return result_array
 
 def generate_roc():
     prediction_engine(feature_test)
@@ -420,9 +478,21 @@ def get_players():
 @app.route('/selected_players/', methods=['POST'])
 # @cross_origin(origin='**')
 def selected_players():
-    response = jsonify(analyse_players(request.get_json()))
-    response.headers.add("Access-Control-Allow-Origin", "*")
-    return response
+    payload = request.get_json()
+    print(payload[0][0])
+    # exit()
+    if(payload[0][0] == '1'):
+        print("Score based request")
+        del payload[0]
+        response = jsonify(analyse_players(request.get_json()))
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
+    else:
+        print("Class based request")
+        del payload[0]
+        response = jsonify(generate_class_prediction(request.get_json()))
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
 
 
 if __name__ == '__main__':

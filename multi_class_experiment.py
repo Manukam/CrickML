@@ -225,22 +225,22 @@ def initialise():
     # feature_test = pca.transform(feature_test)  
 
     # Train Naive Bayes model
-    gnb = GaussianNB()
-    gnb.fit(feature_train, target_train)
+    # gnb = GaussianNB()
+    # gnb.fit(feature_train, target_train)
     # nb_pred_prob = gnb.predict_proba(feature_test)
-    nb_pred = gnb.predict(feature_test)
-    print(classification_report(target_test, nb_pred))
-    acc = accuracy_score(nb_pred, target_test)
-    print(acc)
+    # nb_pred = gnb.predict(feature_test)
+    # print(classification_report(target_test, nb_pred))
+    # acc = accuracy_score(nb_pred, target_test)
+    # print(acc)
 
     # exit()
 
     # Train Multi-layer Perceptron model
-    mlp_clf = MLPClassifier(solver='lbfgs', alpha=1e-06,
-                            hidden_layer_sizes=(13), random_state=7, max_iter=1100)
-    mlp_clf.fit(feature_train, target_train)
+    # mlp_clf = MLPClassifier(solver='lbfgs', alpha=1e-06,
+    #                         hidden_layer_sizes=(13), random_state=7, max_iter=1100)
+    # mlp_clf.fit(feature_train, target_train)
     # mlp_pred_prob = mlp_clf.predict_proba(feature_test)
-    mlp_pred = mlp_clf.predict(feature_test)
+    # mlp_pred = mlp_clf.predict(feature_test)
     # print(classification_report(target_test, mlp_pred))
     # acc = accuracy_score(mlp_pred, target_test)
     # print(acc)
@@ -298,28 +298,31 @@ def initialise():
     # Train Decision Tree model
     desT = DecisionTreeClassifier(max_depth=11)
     desT.fit(feature_train, target_train)
-    desc_pred = desT.predict(feature_test)
-    desc_pred_prob = desT.predict_proba(feature_test)
-    print(classification_report(target_test, desc_pred))
-    acc = accuracy_score(desc_pred, target_test)
-    print(acc)
+    # desc_pred = desT.predict(feature_test)
+    # desc_pred_prob = desT.predict_proba(feature_test)
+    # print(classification_report(target_test, desc_pred))
+    # acc = accuracy_score(desc_pred, target_test)
+    # print(acc)
 
-    exit()
+    # exit()
 
-    amt_say_nb = acceptance_rate(nb_pred, target_test)
+    # amt_say_nb = acceptance_rate(nb_pred, target_test)
 
-    amt_say_mlp = acceptance_rate(mlp_pred, target_test)
+    # amt_say_mlp = acceptance_rate(mlp_pred, target_test)
 
-    amt_say_svm = acceptance_rate(svm_pred, target_test)
+    # amt_say_svm = acceptance_rate(svm_pred, target_test)
 
-    amt_say_desc = acceptance_rate(desc_pred, target_test)
+    # amt_say_desc = acceptance_rate(desc_pred, target_test)
 
-    print('Amount of say NB :', amt_say_nb)
-    print('Amount of say MLP :', amt_say_mlp)
-    print('Amount of say SVM :', amt_say_svm)
-    print('Amount of say Descision Tree :', amt_say_desc)
+    # print('Amount of say NB :', amt_say_nb)
+    # print('Amount of say MLP :', amt_say_mlp)
+    # print('Amount of say SVM :', amt_say_svm)
+    # print('Amount of say Descision Tree :', amt_say_desc)
 
-    return connection, gnb, mlp_clf, svm_clf, desT, amt_say_desc, amt_say_mlp, amt_say_nb, amt_say_svm, max_home, max_away, max_recent, max_career, feature_train, feature_test, target_train, target_test
+    return connection, desT, max_home, max_away, max_recent, max_career, feature_train, feature_test, target_train, target_test
 
+def prediction_class_based(players):
+    prediction = desT.predict(players)
+    return prediction
 
-connection, nb, mlp, svm, dest, desc_say, mlp_say, nb_say, svm_say, max_home, max_away, max_recent, max_career, feature_train, feature_test, target_train, target_test = initialise()
+connection, desT, max_home, max_away, max_recent, max_career, feature_train, feature_test, target_train, target_test = initialise()
