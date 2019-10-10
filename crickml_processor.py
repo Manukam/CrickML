@@ -429,8 +429,7 @@ def generate_class_prediction(players):
         #     total_predictions.append(domestic_predictions[0])
         #     selected_players.append(selected_players_domestic[0])
         # # print(players[0])
-        # # exit()
-        result_array = [[0 for x in range(6)]
+                result_array = [[0 for x in range(6)]
                         for y in range(len(predictions)+1)]
         # print(selected_players)
         for index, prediction in enumerate(predictions):
