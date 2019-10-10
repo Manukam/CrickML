@@ -433,7 +433,6 @@ def generate_class_prediction(players):
         result_array = [[0 for x in range(6)]
                         for y in range(len(predictions)+1)]
         # print(selected_players)
-        # exit()
         for index, prediction in enumerate(predictions):
             print("starting final output processing - Class based")
             # print(prediction)
